@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BIM/CIM ドキュメント自動生成ツール</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<style>
+  :root{
+    --primary:#1a4d7c; --primary-dark:#123a5e; --accent:#2e8b9e;
+    --bg:#f4f6f9; --panel:#ffffff; --line:#dfe5ec; --text:#1f2a37;
+    --muted:#6b7785; --ok:#1f9d55; --warn:#d97706; --miss:#dc2626;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+    background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+  header{background:linear-gradient(135deg,var(--primary),var(--accent));color:#fff;
+    padding:16px 28px;display:flex;align-items:center;gap:14px;}
+  header h1{font-size:18px;margin:0;font-weight:700;}
+  header .tag{background:rgba(255,255,255,.2);padding:3px 10px;border-radius:12px;font-size:11px;}
+  .wrap{max-width:1280px;margin:0 auto;padding:20px;}
+  .grid{display:grid;grid-template-columns:350px 1fr;gap:20px;align-items:start;}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:18px;box-shadow:0 1px 3px rgba(0,0,0,.04);margin-bottom:18px;}
+  .panel h2{font-size:14px;margin:0 0 12px;padding-bottom:8px;border-bottom:2px solid var(--primary);
+    color:var(--primary);display:flex;align-items:center;gap:7px;}
+  .step-num{background:var(--primary);color:#fff;width:20px;height:20px;border-radius:50%;
+    display:inline-flex;align-items:center;justify-content:center;font-size:12px;flex:0 0 auto;}
+  .drop{border:2px dashed var(--line);border-radius:8px;padding:16px;text-align:center;
+    cursor:pointer;transition:.15s;margin-bottom:8px;background:#fafbfc;}
+  .drop:hover,.drop.over{border-color:var(--accent);background:#eef7f9;}
+  .drop .ico{font-size:24px;}
+  .drop .lbl{font-weight:600;font-size:13px;margin-top:2px;}
+  .drop .sub{color:var(--muted);font-size:11px;}
+  .filechip{display:flex;align-items:center;gap:8px;background:#eef7f9;border:1px solid #cfe6ec;
+    border-radius:6px;padding:6px 10px;font-size:12px;margin-top:6px;}
+  .filechip .x{margin-left:auto;cursor:pointer;color:var(--muted);font-weight:700;}
+  label.fld{display:block;font-size:12px;color:var(--muted);margin:10px 0 3px;font-weight:600;}
+  select,input,textarea{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;
+    font-family:inherit;font-size:13px;background:#fff;}
+  button{cursor:pointer;border:none;border-radius:7px;font-family:inherit;font-weight:700;}
+  .btn-primary{background:var(--primary);color:#fff;padding:11px 16px;width:100%;font-size:14px;margin-top:14px;}
+  .btn-primary:hover{background:var(--primary-dark);}
+  .btn-primary:disabled{background:#aab4c0;cursor:not-allowed;}
+  .btn-mini{background:#eef2f7;color:var(--primary);padding:6px 12px;font-size:12px;}
+  .btn-mini:hover{background:#dde6f0;}
+  .chkgrp{max-height:200px;overflow:auto;border:1px solid var(--line);border-radius:6px;padding:8px;}
+  .chkrow{display:flex;gap:7px;align-items:flex-start;font-size:12px;padding:3px 0;}
+  .chkrow input{width:auto;margin-top:3px;}
+  .chkrow .gimu{color:var(--miss);font-weight:700;font-size:10px;}
+  .chkrow .suisho{color:var(--accent);font-weight:700;font-size:10px;}
+  .tabs{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px;}
+  .tab{padding:9px 13px;border-radius:7px 7px 0 0;background:#e8edf3;color:var(--muted);
+    font-weight:700;font-size:13px;cursor:pointer;border:1px solid transparent;}
+  .tab.active{background:#fff;color:var(--primary);border-color:var(--line);border-bottom-color:#fff;}
+  .missbox{background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:12px 14px;margin-bottom:14px;}
+  .missbox h3{margin:0 0 6px;font-size:13px;color:var(--warn);}
+  .missbox ul{margin:6px 0 0;padding-left:18px;columns:2;}
+  .missbox li{font-size:12.5px;margin-bottom:3px;}
+  .missbox li b{color:var(--miss);}
+  .doc{border:1px solid var(--line);border-radius:8px;padding:32px 36px;background:#fff;min-height:300px;}
+  .empty{color:var(--muted);text-align:center;padding:60px 20px;}
+  .empty .ico{font-size:42px;opacity:.4;}
+  .spinner{display:none;text-align:center;padding:40px;color:var(--primary);}
+  .spinner.on{display:block;}
+  .spin{width:34px;height:34px;border:4px solid #dce6f0;border-top-color:var(--primary);
+    border-radius:50%;animation:r 1s linear infinite;margin:0 auto 12px;}
+  @keyframes r{to{transform:rotate(360deg);}}
+  .toolbar{display:flex;gap:8px;justify-content:flex-end;margin-bottom:12px;flex-wrap:wrap;}
+  .hl{background:#fff3cd;border-bottom:1px dashed #d97706;padding:0 2px;}
+  .note{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5;}
+  .lib a{display:block;font-size:11.5px;color:var(--primary);text-decoration:none;padding:4px 6px;
+    border-bottom:1px solid #f0f3f7;line-height:1.4;}
+  .lib a:hover{background:#f3f7fb;}
+  .lib .meta{color:var(--muted);font-size:10px;}
+
+  /* ===== 様式テーマ ===== */
+  .doc.style-mlit{font-family:"Yu Mincho","Hiragino Mincho ProN",serif;}
+  .doc.style-mlit .doc-title{letter-spacing:4px;}
+  .doc.style-mlit h4{background:none;border-left:6px solid #1a4d7c;padding-left:10px;color:#000;}
+  .doc.style-corpA .doc-title{color:#0b6e4f;border-color:#0b6e4f;}
+  .doc.style-corpA h4{background:#e7f5ef;color:#0b6e4f;border-left:4px solid #0b6e4f;}
+  .doc.style-corpB .doc-title{color:#7a3b9c;border-color:#7a3b9c;}
+  .doc.style-corpB h4{background:#f3eaf8;color:#7a3b9c;border-left:4px solid #7a3b9c;}
+
+  .doc-title{font-size:21px;font-weight:700;text-align:center;margin:0 0 4px;color:var(--primary);
+    border-bottom:3px solid var(--primary);padding-bottom:10px;}
+  .doc-sub{text-align:center;color:var(--muted);font-size:12px;margin-bottom:20px;}
+  .doc h4{font-size:14px;margin:24px 0 8px;background:#eef2f7;color:var(--primary);
+    padding:6px 10px;border-left:4px solid var(--primary);}
+  .doc h5{font-size:13px;margin:14px 0 4px;color:var(--primary-dark);}
+  table.t{width:100%;border-collapse:collapse;margin:8px 0;font-size:12px;}
+  table.t th,table.t td{border:1px solid #b9c4d0;padding:6px 8px;vertical-align:top;text-align:left;}
+  table.t th{background:#eaf0f6;font-weight:700;}
+  table.t th.k{width:26%;white-space:nowrap;}
+  ul.docul{margin:6px 0;padding-left:22px;} ul.docul li{margin-bottom:4px;}
+  .chk td:first-child{text-align:center;width:36px;font-size:14px;}
+  .chk th{background:#eaf0f6;text-align:center;}
+  .gtag{display:inline-block;font-size:10px;padding:1px 6px;border-radius:3px;color:#fff;margin-right:6px;}
+  .gtag.g{background:#dc2626;} .gtag.s{background:#2e8b9e;}
+  .footer-credit{text-align:center;color:var(--muted);font-size:11px;padding:16px;}
+  .src-note{font-size:10.5px;color:var(--muted);border-top:1px dashed var(--line);margin-top:24px;padding-top:8px;}
+</style>
+</head>
+<body>
+<header>
+  <span style="font-size:22px;">🏗️</span>
+  <h1>BIM/CIM ドキュメント自動生成ツール</h1>
+  <span class="tag">国交省様式準拠 / 実施計画書・実施報告書・照査チェックシート</span>
+</header>
+
+<div class="wrap">
+<div class="grid">
+
+  <!-- 左：入力パネル -->
+  <div>
+    <div class="panel">
+      <h2><span class="step-num">1</span>資料アップロード</h2>
+      <div class="drop" id="dropPlan">
+        <div class="ico">📄</div><div class="lbl">業務計画書</div>
+        <div class="sub">PDF / Word をドラッグ＆ドロップ</div>
+      </div>
+      <div id="chipPlan"></div>
+      <div class="drop" id="dropSpec">
+        <div class="ico">📋</div><div class="lbl">特記仕様書</div>
+        <div class="sub">PDF / Word をドラッグ＆ドロップ</div>
+      </div>
+      <div id="chipSpec"></div>
+      <input type="file" id="fileInput" accept=".pdf,.docx" style="display:none;">
+      <button class="btn-mini" id="sampleBtn" style="width:100%;margin-top:8px;">▶ サンプル資料（宇治山田港）で試す</button>
+    </div>
+
+    <div class="panel">
+      <h2><span class="step-num">2</span>BIM/CIM活用項目</h2>
+      <div class="note" style="margin:0 0 6px;">国交省実施計画書の標準項目。発注方式に応じ選択してください。</div>
+      <h5 style="margin:6px 0 2px;color:var(--miss);font-size:11px;">〔義務項目〕</h5>
+      <div class="chkgrp" id="gimuGrp"></div>
+      <h5 style="margin:10px 0 2px;color:var(--accent);font-size:11px;">〔推奨項目〕</h5>
+      <div class="chkgrp" id="suishoGrp"></div>
+    </div>
+
+    <div class="panel">
+      <h2><span class="step-num">3</span>出力設定</h2>
+      <label class="fld">発注方式</label>
+      <select id="orderType">
+        <option value="shitei">発注者指定型</option>
+        <option value="kibou">受注者希望型</option>
+      </select>
+      <label class="fld">会社様式（レイアウト）</label>
+      <select id="styleSel">
+        <option value="mlit">国土交通省 標準様式</option>
+        <option value="corpA">A社 様式（グリーン系）</option>
+        <option value="corpB">B社 様式（パープル系）</option>
+      </select>
+      <label class="fld">抽出エンジン</label>
+      <select id="engineSel">
+        <option value="rule">ルールベース抽出（APIキー不要・デモ）</option>
+        <option value="llm">Claude API 抽出（要APIキー）</option>
+      </select>
+      <div id="apiKeyWrap" style="display:none;">
+        <label class="fld">Anthropic API キー</label>
+        <input type="password" id="apiKey" placeholder="sk-ant-...">
+      </div>
+      <button class="btn-primary" id="genBtn" disabled>たたきを生成する</button>
+    </div>
+
+    <div class="panel">
+      <h2>📚 過年度事例ライブラリ</h2>
+      <div class="note" style="margin:0 0 6px;">Googleドライブ「設計5期/6期」から収集した実成果物。様式・記載例の参照に。</div>
+      <div class="lib" id="libList"></div>
+    </div>
+  </div>
+
+  <!-- 右：出力パネル -->
+  <div class="panel" style="margin-bottom:0;">
+    <div class="tabs" id="tabs">
+      <div class="tab active" data-doc="plan">実施計画書</div>
+      <div class="tab" data-doc="report">実施報告書</div>
+      <div class="tab" data-doc="check">照査チェックシート</div>
+    </div>
+    <div class="spinner" id="spinner"><div class="spin"></div>資料を解析し、国交省様式に沿ってドキュメントを生成しています…</div>
+    <div id="missArea"></div>
+    <div class="toolbar" id="toolbar" style="display:none;">
+      <button class="btn-mini" onclick="downloadDoc('html')">🌐 HTML保存</button>
+      <button class="btn-mini" onclick="downloadDoc('docx')">📝 Word(.doc)保存</button>
+      <button class="btn-mini" onclick="copyForGDocs()">📋 Googleドキュメント用にコピー</button>
+    </div>
+    <div id="output">
+      <div class="empty">
+        <div class="ico">📑</div>
+        <p>資料をアップロードし活用項目を選んで「たたきを生成する」を押すと、<br>国交省様式に準拠した3種類のドキュメント案がここに表示されます。</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+<div class="footer-credit">BIM/CIM Document Generator — バイブコーディング選手権 プロトタイプ（国交省BIM/CIM実施計画書・実施報告書 記載例 R6 準拠）</div>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+const state = { planText:"", specText:"", data:null, docs:null, current:"plan" };
+
+/* ============ 国交省 標準 活用項目（記載例R6より） ============ */
+const KATSUYO = {
+  gimu:[
+    {id:"g_zentai", t:"出来上がり全体イメージの確認",
+      genchi:"整備区間において、民地上に築堤すること等から、地元住民との関係機関協議の際、事業の合意形成を図る必要がある。",
+      naiyo:"前段階で作成した3次元モデル等を活用して、対象地区全体の出来上がりの完成形状を3次元モデルで可視化することで、住民説明、関係者協議、景観検討などにおける関係者間での全体イメージの共有を図る。"},
+    {id:"g_tokutei", t:"特定部の確認",
+      genchi:"対象道路付近には、電柱が存在し水道管が埋設されている等、2次元では把握が難しい既設構造物が存在する。",
+      naiyo:"2次元では表現が難しい既設構造物、地下構造物、架空線と設計対象物との取り合いを確認するため、設計対象物と既設構造物等を3次元モデル化して、関係者の理解促進や2次元図面の精度向上を図る。"},
+    {id:"g_sekou", t:"施工計画の検討補助",
+      genchi:"詳細設計にて工事範囲全体の3次元モデルが作成されている。",
+      naiyo:"詳細設計等で作成された3次元モデルを閲覧し、工事用進入路、資材置き場などの施工計画を検討する際の参考にする。"},
+    {id:"g_2jigen", t:"2次元図面の理解補助",
+      genchi:"詳細設計にて工事範囲全体の3次元モデルが作成されている。",
+      naiyo:"詳細設計等で作成された3次元モデルを閲覧し、2次元図面と比較することで、2次元図面を理解する際の参考にする。"},
+    {id:"g_setsumei", t:"現場作業員等への説明",
+      genchi:"詳細設計にて工事範囲全体の3次元モデルが作成されている。",
+      naiyo:"詳細設計で作成された3次元モデルを用いて、現場作業員等に工事の完成イメージ等を説明し、現場作業員等の理解促進を図る。"}
+  ],
+  suisho:[
+    {id:"s_kasane", t:"重ね合わせによる確認",
+      genchi:"対象範囲には、民地と官地を区分けするための用地境界が存在している。",
+      naiyo:"検討法線における堤防モデルを作成し、用地図を3次元モデルに重ね合わせて干渉の有無を確認し、用地リスクを回避できるか検討する。",
+      teisei:"一連区間にて干渉の有無を確認でき、2次元の図面よりも照査の高度化が図れる。",
+      teiryo:"管理者との協議では立体的なイメージ共有が可能であり、理解促進により協議時間の短縮効果が期待できる。"},
+    {id:"s_genba", t:"現場条件の確認",
+      genchi:"施工時において、重機の作業半径内に既設構造物が干渉しないか確認する必要がある。",
+      naiyo:"対象地点において既設構造物の簡易な3次元モデルを作成し、施工重機を配置して作業半径に干渉しないような重機配置を検討する。管理者との協議に活用する。",
+      teisei:"可視化により施工時の既設物との取り合いが容易に把握でき、適切な施工計画を作成でき、事故リスクの低減につながる。",
+      teiryo:"協議においては施工内容の理解促進により協議時間の短縮効果が期待できる。"},
+    {id:"s_step3d", t:"施工ステップの確認（3D）",
+      genchi:"乗り越し道路の整備等、現況の道路を活かしたままの施工が必要になる。",
+      naiyo:"切り回しパターンごとに3次元モデルの画像を取得し、施工時の既設占用物や歩道橋との取り合い、信号機の仮設・移設等を施工ステップ毎に確認し適切な施工計画の検討を実施する。",
+      teisei:"可視化により施工時の既設物との取り合いが容易に把握でき、現場説明及び協議の円滑化が図れる。",
+      teiryo:"協議においては施工内容の理解促進により協議時間の短縮効果が期待できる。"},
+    {id:"s_step4d", t:"施工ステップの確認（4Dシミュレーション）",
+      genchi:"複数工種が輻輳しており、安全確保の観点から留意が必要である。",
+      naiyo:"想定工程表に対応する時間情報を3次元モデルに付与し、4Dシミュレーションにより施工計画の検討を実施するとともに、作業員への作業内容の周知、安全教育へ活用する。",
+      teisei:"可視化により施工計画検討の円滑化が図られ、時間軸付与により工期内施工の確実な立案及び受発注者確認が可能である。",
+      teiryo:"協議においては施工内容の理解促進により協議時間の短縮効果が期待できる。"},
+    {id:"s_jigyo", t:"事業計画の検討",
+      genchi:"流下能力確保のために民地に築堤する必要があり、土地利用状況を踏まえ法線検討をする必要がある。",
+      naiyo:"事業範囲において複数案の3次元モデルを作成し、比較検討に活用する。採用案を地元説明会に活用する。",
+      teisei:"可視化により完成イメージの共有がしやすく、比較検討におけるメリット・デメリットの抽出が容易にでき受発注者協議の高度化が図られる。",
+      teiryo:"採用案の提示により地元住民の理解促進につながり、協議回数が短縮できる。"},
+    {id:"s_ar", t:"施工管理での活用（AR活用）",
+      genchi:"家屋に近接する箇所及び施工する構造物を横断する架空線が存在している。",
+      naiyo:"家屋及び架空線の3次元モデルを作成し施工機械の3次元モデルを配置する。ARを活用し現場で確認することで、安全状況の確認を作業関係者と行う。",
+      teisei:"ARを活用することで実際の現場での作業関係者とのイメージ共有が容易であり、安全教育につながる。",
+      teiryo:"—"},
+    {id:"s_fukashi", t:"不可視部の3次元モデル化",
+      genchi:"基礎地盤に軟弱な粘性土層が存在し、既設構造物では被災履歴から漏水・不同沈下が発生していた。",
+      naiyo:"基礎地盤を対象に準3次元地質断面図を作成し、過去被災箇所には点検結果を属性情報として付与した統合モデルを作成する。維持管理時に利用可能な基礎データを作成する。",
+      teisei:"3次元データで可視化することで維持管理時の資料確認の効率化を図る。今後モデルを追加することでデータの集約化が可能である。",
+      teiryo:"—"}
+  ]
+};
+
+/* ============ 過年度事例ライブラリ（Driveから収集） ============ */
+const LIBRARY = [
+  {n:"BIMCIM実施計画書_令和6年度瑞浪恵那道路恵那地区整備工事", t:"実施計画書", u:"https://drive.google.com/file/d/1LSABbohPCCYSGRHJb-loFATo9YagWmJ6/view"},
+  {n:"BIMCIM実施報告書_令和5～6年度山形南部交通対策設計業務", t:"実施報告書", u:"https://drive.google.com/file/d/1OCQXNdU0gcqxMFN4_HXtNdjJcIuALa1p/view"},
+  {n:"BIMCIMモデル照査時チェックシート_山形南部交通対策設計業務", t:"照査CS", u:"https://drive.google.com/file/d/1h03uLA3zjZ5llKW5OT7mlhCJ73AQAyyW/view"},
+  {n:"250502 BIM/CIM実施計画書（西舞鶴道路）", t:"実施計画書", u:"https://drive.google.com/file/d/1_L-cZ9myGVY4VIHtImT7wWUna477VRcG/view"},
+  {n:"01-1 業務計画書 第2回変更（西舞鶴道路他）", t:"業務計画書", u:"https://drive.google.com/file/d/1_Kt5_op4hplR1VRq8MCQMzFDL96XHSys/view"},
+  {n:"【宇治山田】業務計画書", t:"業務計画書", u:"https://docs.google.com/document/d/1g-o6UC7blMkSoiIAsEaFsFk7g3qTg1wpC7SoK_q9dTE/edit"},
+  {n:"BIM/CIM成果品 照査チェックシート（五名ダム）", t:"照査CS", u:"https://docs.google.com/document/d/1YmA2aTyO3WJKPXLCyIQFpWynlfIzki-QZFy8gmzPxe0/edit"},
+  {n:"BIM・CIM実施計画書 / 実施報告書（雛形）", t:"実施計画書", u:"https://drive.google.com/file/d/1E87UeT0Gd57YiH9cD_yxzEgrVK4IDrbp/view"},
+  {n:"特記仕様書（R6岡山倉敷立体構造物予備設計）", t:"特記仕様書", u:"https://drive.google.com/file/d/1af6_rzS5-VROYM8mn71wd_NNGKD6XqBC/view"}
+];
+
+/* ============ サンプル（宇治山田港 業務計画書の実データ） ============ */
+const SAMPLE = `業務計画書
+業務名： 令和7年度県単海岸局部改良 第31-1分2003号 宇治山田港(海岸)(西・荘工区)海岸侵食対策(堤防設計)業務委託
+発注者： 三重県伊勢建設事務所 事業推進室 流域一課
+受注者： 三井共同建設コンサルタント株式会社 三重営業所
+履行場所： 伊勢市二見町西～伊勢市二見町荘地内
+履行期間： 令和7年8月18日～令和8年5月29日
+管理技術者： 近森 裕之
+照査技術者： 瀧澤 竜一
+業務の目的： 既往設計成果等を踏まえ工事の実施に必要な図面・数量作成を行う詳細設計を目的とする
+詳細度： 200～300
+使用ソフトウェア： Civil3D, Revit
+成果品： 業務報告書及び概要版(A4版)、電子記憶媒体(DVD-R)3部、紙ベース1部`;
+
+/* ============ ファイルアップロード ============ */
+let activeTarget=null;
+const fileInput=document.getElementById("fileInput");
+["Plan","Spec"].forEach(t=>{
+  const drop=document.getElementById("drop"+t);
+  drop.addEventListener("click",()=>{activeTarget=t;fileInput.click();});
+  drop.addEventListener("dragover",e=>{e.preventDefault();drop.classList.add("over");});
+  drop.addEventListener("dragleave",()=>drop.classList.remove("over"));
+  drop.addEventListener("drop",e=>{e.preventDefault();drop.classList.remove("over");activeTarget=t;
+    if(e.dataTransfer.files[0])handleFile(e.dataTransfer.files[0]);});
+});
+fileInput.addEventListener("change",e=>{if(e.target.files[0])handleFile(e.target.files[0]);});
+async function handleFile(file){
+  const t=activeTarget;const text=await extractText(file);
+  if(t==="Plan")state.planText=text; else state.specText=text;
+  document.getElementById("chip"+t).innerHTML=
+    `<div class="filechip">📎 <span>${file.name}</span><span class="x" onclick="clearFile('${t}')">×</span></div>`;
+  document.getElementById("genBtn").disabled=!(state.planText||state.specText);
+}
+function clearFile(t){
+  if(t==="Plan")state.planText=""; else state.specText="";
+  document.getElementById("chip"+t).innerHTML="";
+  document.getElementById("genBtn").disabled=!(state.planText||state.specText);
+}
+async function extractText(file){
+  const ext=file.name.split(".").pop().toLowerCase();
+  if(ext==="pdf"){
+    const buf=await file.arrayBuffer();
+    const pdf=await pdfjsLib.getDocument({data:buf}).promise;let txt="";
+    for(let i=1;i<=pdf.numPages;i++){const p=await pdf.getPage(i);const c=await p.getTextContent();
+      txt+=c.items.map(it=>it.str).join(" ")+"\n";}
+    return txt;
+  } else if(ext==="docx"){
+    const buf=await file.arrayBuffer();
+    const r=await mammoth.extractRawText({arrayBuffer:buf});return r.value;
+  }
+  return "";
+}
+document.getElementById("engineSel").addEventListener("change",e=>{
+  document.getElementById("apiKeyWrap").style.display=e.target.value==="llm"?"block":"none";});
+document.getElementById("styleSel").addEventListener("change",()=>{if(state.docs)renderDoc();});
+document.getElementById("orderType").addEventListener("change",()=>{if(state.docs){rebuild();}});
+
+document.getElementById("sampleBtn").addEventListener("click",()=>{
+  state.planText=SAMPLE;state.specText="";
+  document.getElementById("chipPlan").innerHTML=
+    `<div class="filechip">📎 <span>宇治山田港_業務計画書.pdf</span><span class="x" onclick="clearFile('Plan')">×</span></div>`;
+  // サンプルは標準的な義務3項目＋推奨2項目を自動選択
+  ["g_zentai","g_tokutei","g_2jigen"].forEach(id=>{const e=document.getElementById("cb_"+id);if(e)e.checked=true;});
+  ["s_kasane","s_jigyo"].forEach(id=>{const e=document.getElementById("cb_"+id);if(e)e.checked=true;});
+  document.getElementById("genBtn").disabled=false;
+  document.getElementById("genBtn").click();
+});
+
+/* ============ 活用項目チェックボックス描画 ============ */
+function renderKatsuyo(){
+  document.getElementById("gimuGrp").innerHTML = KATSUYO.gimu.map(k=>
+    `<label class="chkrow"><input type="checkbox" id="cb_${k.id}"><span><span class="gimu">必須</span>${k.t}</span></label>`).join("");
+  document.getElementById("suishoGrp").innerHTML = KATSUYO.suisho.map(k=>
+    `<label class="chkrow"><input type="checkbox" id="cb_${k.id}"><span><span class="suisho">推奨</span>${k.t}</span></label>`).join("");
+}
+function selectedItems(){
+  const g=KATSUYO.gimu.filter(k=>document.getElementById("cb_"+k.id).checked);
+  const s=KATSUYO.suisho.filter(k=>document.getElementById("cb_"+k.id).checked);
+  return {g,s};
+}
+function renderLibrary(){
+  document.getElementById("libList").innerHTML = LIBRARY.map(l=>
+    `<a href="${l.u}" target="_blank">${l.n}<span class="meta"> — ${l.t}</span></a>`).join("");
+}
+renderKatsuyo();renderLibrary();
+
+/* ============ 抽出フィールド（実業務計画書 様式第5号 準拠） ============ */
+const FIELDS=[
+  {key:"projectName",label:"業務名",re:/(?:業務名|件名|工事名|委託業務名)[：:\s]*([^\n。]{4,80})/},
+  {key:"projectId",label:"プロジェクト名",re:/(?:プロジェクト名|事業名)[：:\s]*([^\n。]{2,50})/},
+  {key:"client",label:"発注者",re:/(?:発注者|発注機関|委託者)[：:\s]*([^\n。]{2,50})/},
+  {key:"contractor",label:"受注者",re:/(?:受注者|受託者|請負者|受注者氏名)[：:\s]*([^\n。]{2,50})/},
+  {key:"period",label:"履行期間",re:/(?:履行期間|工期|業務期間)[：:\s]*([^\n。]{6,60})/},
+  {key:"location",label:"履行場所",re:/(?:履行場所|業務場所|施工場所|工事場所)[：:\s]*([^\n。]{2,60})/},
+  {key:"purpose",label:"業務目的・概要",re:/(?:業務の目的|活用目的|目的|業務概要)[：:\s]*([^\n]{8,160})/},
+  {key:"lod",label:"モデル詳細度(LOD)",re:/(?:詳細度|LOD)[：:\s]*([^\n。]{1,40})/},
+  {key:"software",label:"使用ソフトウェア",re:/(?:使用ソフトウェア|使用ソフト|ソフトウェア)[：:\s]*([^\n。]{2,60})/},
+  {key:"deliverable",label:"成果品",re:/(?:成果品|納品物|提出物)[：:\s]*([^\n。]{4,100})/},
+  {key:"manager",label:"管理技術者",re:/(?:管理技術者)[：:\s]*([^\n。]{2,30})/},
+  {key:"checker",label:"照査技術者",re:/(?:照査技術者)[：:\s]*([^\n。]{2,30})/}
+];
+function ruleExtract(text){const o={};FIELDS.forEach(f=>{const m=text.match(f.re);o[f.key]=m?m[1].trim().replace(/\s+/g," "):"";});return o;}
+async function llmExtract(text,key){
+  const schema=FIELDS.map(f=>`"${f.key}":"${f.label}"`).join(", ");
+  const prompt=`あなたは建設コンサルの技術者です。BIM/CIM業務の計画書・特記仕様書から次項目をJSON抽出。記載なき項目は空文字。\n項目:{${schema}}\n--- 本文 ---\n${text.slice(0,12000)}\nJSONのみ出力:`;
+  const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",
+    headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+    body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1500,messages:[{role:"user",content:prompt}]})});
+  const j=await res.json();return JSON.parse(j.content[0].text.replace(/```json|```/g,"").trim());
+}
+
+/* ============ 生成実行 ============ */
+document.getElementById("genBtn").addEventListener("click",async()=>{
+  const sp=document.getElementById("spinner");
+  document.getElementById("output").innerHTML="";document.getElementById("missArea").innerHTML="";
+  document.getElementById("toolbar").style.display="none";sp.classList.add("on");
+  const combined=state.planText+"\n"+state.specText;
+  try{
+    if(document.getElementById("engineSel").value==="llm"){
+      const key=document.getElementById("apiKey").value.trim();
+      if(!key){alert("APIキーを入力してください");sp.classList.remove("on");return;}
+      state.data=await llmExtract(combined,key);
+    }else{await new Promise(r=>setTimeout(r,700));state.data=ruleExtract(combined);}
+    rebuild();sp.classList.remove("on");
+    document.getElementById("toolbar").style.display="flex";renderMissing();
+  }catch(e){sp.classList.remove("on");alert("抽出に失敗しました: "+e.message);}
+});
+function rebuild(){state.docs=buildDocs(state.data,selectedItems());renderDoc();}
+
+/* ============ 値ヘルパー ============ */
+function v(d,key){const f=FIELDS.find(x=>x.key===key);return d[key]&&d[key].trim()?d[key].trim():`<span class="hl">【要記入：${f?f.label:key}】</span>`;}
+function today(){const d=new Date();return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`;}
+const REQ="<span class=\"hl\">【要記入】</span>";
+
+/* ============ 3ドキュメント生成（国交省記載例R6準拠） ============ */
+function buildDocs(d,sel){
+  const ot=document.getElementById("orderType").value;
+  const otLabel=ot==="shitei"?"発注者指定型":"受注者希望型";
+  const hasItems=sel.g.length||sel.s.length;
+
+  // --- 概要表（記載例の様式） ---
+  const gaiyo=`<table class="t">
+    <tr><th class="k">業務／工事名</th><td>${v(d,'projectName')}</td></tr>
+    <tr><th class="k">プロジェクト名</th><td>${d.projectId?d.projectId:REQ}</td></tr>
+    <tr><th class="k">履行場所</th><td>${v(d,'location')}</td></tr>
+    <tr><th class="k">発注者</th><td>${v(d,'client')}</td></tr>
+    <tr><th class="k">受注者</th><td>${v(d,'contractor')}</td></tr>
+    <tr><th class="k">履行期間</th><td>${v(d,'period')}</td></tr>
+    <tr><th class="k">業務概要及びBIM/CIM実施概要</th><td>${d.purpose?d.purpose:REQ}</td></tr>
+    <tr><th class="k">BIM/CIM適用区分</th><td>BIM/CIM適用業務（${otLabel}）</td></tr>
+  </table>`;
+
+  // --- 実施項目リスト ---
+  const itemList=()=>{
+    let h="";
+    if(sel.g.length){h+=`<p style="margin:4px 0;"><b>〔義務項目〕</b></p><ul class="docul">`+
+      sel.g.map((k,i)=>`<li>${String.fromCharCode(97+i)}) ${k.t}</li>`).join("")+`</ul>`;}
+    if(sel.s.length){h+=`<p style="margin:4px 0;"><b>〔推奨項目〕</b></p><ul class="docul">`+
+      sel.s.map((k,i)=>`<li>${String.fromCharCode(97+i)}) ${k.t}</li>`).join("")+`</ul>`;}
+    if(!hasItems)h=`<p>${REQ}（左メニューでBIM/CIM活用項目を選択してください）</p>`;
+    return h;
+  };
+
+  /* ===== 1. 実施計画書 ===== */
+  const planItems=()=>{
+    let h="";
+    sel.g.forEach((k,i)=>{h+=`<h5><span class="gtag g">義務</span>${String.fromCharCode(97+i)}) ${k.t}</h5>
+      <p style="margin:2px 0;"><b>1)現地の特徴</b><br>${k.genchi}</p>
+      <p style="margin:2px 0;"><b>2)実施内容</b><br>${k.naiyo}</p>`;});
+    sel.s.forEach((k,i)=>{h+=`<h5><span class="gtag s">推奨</span>${String.fromCharCode(97+i)}) ${k.t}</h5>
+      <p style="margin:2px 0;"><b>1)現地の特徴</b><br>${k.genchi}</p>
+      <p style="margin:2px 0;"><b>2)実施内容</b><br>${k.naiyo}</p>
+      <p style="margin:2px 0;"><b>3)期待する効果</b><br>（定性的評価）${k.teisei}<br>（定量的評価）${k.teiryo}</p>`;});
+    if(!hasItems)h=`<p>${REQ}</p>`;
+    return h;
+  };
+  const plan=`
+    <div class="doc-title">BIM/CIM実施計画書</div>
+    <div class="doc-sub">${v(d,'projectName')}　／　作成日：${today()}</div>
+    <h4>1. 業務／工事概要</h4>
+    <p>本業務／工事実施箇所における特徴及びBIM/CIM活用の目的は、以下に示すとおりである。</p>
+    ${gaiyo}
+    <p style="margin-top:6px;"><b>BIM/CIM実施項目</b></p>${itemList()}
+    <h4>2. BIM/CIMの実施内容（3次元モデルの活用内容、期待する効果等）</h4>
+    <p>本業務／工事は、BIM/CIM適用業務（${otLabel}）である。実施する3次元モデル活用の実施内容・期待する効果は以下のとおりである。</p>
+    ${planItems()}
+    <h4>3. 3次元モデルの作成仕様（作成範囲、詳細度、属性情報）</h4>
+    <p>本業務／工事で作成・更新する3次元モデルの作成範囲、詳細度、別業務等で作成された3次元モデルを下表に示す。</p>
+    <table class="t">
+      <tr><th>作成対象</th><th>作成モデル</th><th>作成/更新/変更</th><th>範囲</th><th>詳細度</th><th>理由</th></tr>
+      <tr><td>${REQ}</td><td>線形/土工/構造物モデル</td><td>作成</td><td>${REQ}</td><td>${d.lod?d.lod:'200〜300'}</td><td>外形形状が把握可能な詳細度とする</td></tr>
+      <tr><td>現況地形</td><td>地形モデル</td><td>更新</td><td>検討範囲全体</td><td>—</td><td>基盤地図情報等を活用し作成・更新する</td></tr>
+    </table>
+    <h4>4. ソフトウェア、データの種類</h4>
+    <table class="t">
+      <tr><th>3次元モデル</th><th>作成ソフトウェア</th><th>閲覧ソフトウェア</th></tr>
+      <tr><td>地形／線形／土工モデル</td><td>${d.software?d.software:'Civil3D'}</td><td>Autodesk Viewer / Navisworks</td></tr>
+      <tr><td>構造物モデル</td><td>Revit</td><td>Autodesk Viewer</td></tr>
+      <tr><td>統合モデル</td><td>Navisworks</td><td>Navisworks Freedom</td></tr>
+    </table>
+    <table class="t">
+      <tr><th>3次元モデル</th><th>オリジナルファイル</th><th>交換標準ファイル</th></tr>
+      <tr><td>地形／線形／土工モデル</td><td>dwg</td><td>J-LandXML, LAS</td></tr>
+      <tr><td>構造物モデル</td><td>dwg</td><td>IFC</td></tr>
+      <tr><td>統合モデル</td><td>nwd</td><td>—</td></tr>
+    </table>
+    <h4>5. 3次元モデルの作成担当者</h4>
+    <table class="t">
+      <tr><th>役割名</th><th>氏名</th><th>所属・役職</th><th>担当内容</th></tr>
+      <tr><td>BIM/CIM全体統括</td><td>${d.manager?d.manager:REQ}</td><td>${REQ}</td><td>計画立案、進捗管理、業務成果の確認等の総括</td></tr>
+      <tr><td>3次元モデル作成調整者</td><td>${REQ}</td><td>${REQ}</td><td>詳細度・ファイル形式の決定や履歴管理</td></tr>
+      <tr><td>3次元モデル照査責任者</td><td>${d.checker?d.checker:REQ}</td><td>${REQ}</td><td>作成した3次元モデルの照査</td></tr>
+    </table>
+    <h4>6. 3次元モデルの作成・活用に要する費用</h4>
+    <p>本業務／工事におけるBIM/CIM作成・活用に要する費用は、別添見積書のとおりである。</p>
+    <div class="src-note">様式出典：国土交通省「BIM/CIM実施計画書（記載例）」R6／成果品：${d.deliverable?d.deliverable:REQ}</div>`;
+
+  /* ===== 2. 実施報告書 ===== */
+  const reportItems=()=>{
+    let h="";
+    sel.g.forEach((k,i)=>{h+=`<h5><span class="gtag g">義務</span>${String.fromCharCode(97+i)}) ${k.t}</h5>
+      <p style="margin:2px 0;"><b>1)現地の特徴</b><br>${k.genchi}</p>
+      <p style="margin:2px 0;"><b>2)実施内容</b><br>${k.naiyo.replace(/する。$/,'した。').replace(/図る。$/,'図った。')}</p>
+      <p style="margin:2px 0;"><b>図-${i+1}</b> ${k.t}の実施結果 ${REQ}（図・写真を貼付）</p>`;});
+    sel.s.forEach((k,i)=>{h+=`<h5><span class="gtag s">推奨</span>${String.fromCharCode(97+i)}) ${k.t}</h5>
+      <p style="margin:2px 0;"><b>1)現地の特徴</b><br>${k.genchi}</p>
+      <p style="margin:2px 0;"><b>2)実施内容</b><br>${k.naiyo.replace(/する。$/,'した。')}</p>
+      <p style="margin:2px 0;"><b>3)活用効果と課題</b><br>（定性的評価）${k.teisei}<br>（定量的評価）${k.teiryo==='—'?'本項目は定性的評価とする。':k.teiryo+'（従来手法との比較は別表のとおり）'}</p>`;});
+    if(!hasItems)h=`<p>${REQ}</p>`;
+    return h;
+  };
+  const report=`
+    <div class="doc-title">BIM/CIM実施報告書</div>
+    <div class="doc-sub">${v(d,'projectName')}　／　作成日：${today()}</div>
+    <h4>1. 業務／工事概要</h4>
+    ${gaiyo}
+    <p style="margin-top:6px;"><b>BIM/CIM実施項目</b></p>${itemList()}
+    <h4>2. BIM/CIMの実施内容（3次元モデルの活用内容、期待する効果等）</h4>
+    <p>本業務／工事で実施した3次元モデル活用の実施概要、活用効果と課題は以下のとおりである。</p>
+    ${reportItems()}
+    <h4>3. 3次元モデルの作成仕様（作成範囲、詳細度、属性情報）</h4>
+    <table class="t">
+      <tr><th>作成対象</th><th>作成モデル</th><th>範囲</th><th>詳細度</th><th>形式</th></tr>
+      <tr><td>${REQ}</td><td>構造物/土工モデル</td><td>${REQ}</td><td>${d.lod?d.lod:'200〜300'}</td><td>IFC</td></tr>
+    </table>
+    <h4>4. ソフトウェア、データの種類</h4>
+    <p>使用ソフトウェア：${d.software?d.software:'Civil3D, Revit, Navisworks'}（納品形式：IFC／オリジナル形式）</p>
+    <h4>5. 3次元モデルの作成担当者</h4>
+    <table class="t">
+      <tr><th>役割名</th><th>氏名</th><th>担当内容</th></tr>
+      <tr><td>BIM/CIM全体統括</td><td>${d.manager?d.manager:REQ}</td><td>計画立案、進捗管理、成果確認等の総括</td></tr>
+      <tr><td>3次元モデル照査責任者</td><td>${d.checker?d.checker:REQ}</td><td>3次元モデルの照査</td></tr>
+    </table>
+    <h4>6. 3次元モデルの作成・活用に要する費用</h4>
+    <p>本業務／工事におけるBIM/CIM作成・活用に要した費用は、別添のとおりである。</p>
+    <h4>7. 後段階への引継事項（データ活用時の留意点、2次元図面との整合等）</h4>
+    <p>本業務では、BIM/CIM取扱要領「附属資料2 3次元モデルと2次元図面の整合確認方法」に基づき主要構造部の整合確認を実施した。整合を確認していない箇所の詳細は「3次元モデル引継書シート」に記載した。${REQ}</p>
+    <h4>8. 省人化の効果</h4>
+    <p>前段階から引き継いだデータの活用及び3次元での検討により省人化した効果は以下のとおりである。${REQ}（定量的評価を整理した表を添付）</p>
+    <div class="src-note">様式出典：国土交通省「BIM/CIM実施報告書（記載例）」R6</div>`;
+
+  /* ===== 3. 照査チェックシート（実務フォーマット＋国交省照査項目） ===== */
+  const modelRows=sel.g.concat(sel.s).map((k)=>
+    `<tr><td>☐</td><td>${k.t}</td><td>計画書記載の活用内容どおりにモデルが作成・活用されているか</td><td>${REQ}</td></tr>`).join("")
+    ||`<tr><td>☐</td><td>${REQ}</td><td>—</td><td>${REQ}</td></tr>`;
+  const check=`
+    <div class="doc-title">BIM/CIM成果品 照査時チェックシート</div>
+    <div class="doc-sub">照査日：${today()}</div>
+    <h4>1. 基本情報</h4>
+    <table class="t">
+      <tr><th class="k">案件名</th><td>${v(d,'projectName')}</td></tr>
+      <tr><th class="k">発注者</th><td>${v(d,'client')}</td></tr>
+      <tr><th class="k">照査者（照査技術者）</th><td>${d.checker?d.checker:REQ}</td></tr>
+      <tr><th class="k">作成日 / 照査日</th><td>${today()}</td></tr>
+      <tr><th class="k">対象データ</th><td>BIM/CIMモデル、関連図面</td></tr>
+    </table>
+    <h4>2. 基本情報・座標系の照査</h4>
+    <table class="t chk">
+      <tr><th>確認</th><th style="text-align:left;">照査項目</th><th style="text-align:left;">確認内容</th></tr>
+      <tr><td>☐</td><td>業務名・発注者の整合</td><td>計画書・特記仕様書の記載と一致しているか</td></tr>
+      <tr><td>☐</td><td>座標系の設定</td><td>平面直角座標系の系番号が正しいか</td></tr>
+      <tr><td>☐</td><td>単位系の設定</td><td>mm/m単位が統一されているか</td></tr>
+      <tr><td>☐</td><td>詳細度(LOD)</td><td>要求詳細度（${d.lod?d.lod:'200〜300'}）を満たすか</td></tr>
+    </table>
+    <h4>3. モデルと2次元図面の整合確認</h4>
+    <p>作成したBIM/CIMモデルと横断図等を重ね合わせ、2次元図面通りのモデルが作成されていることを目視確認する。（キャプチャを別途添付）</p>
+    <table class="t chk">
+      <tr><th>確認</th><th style="text-align:left;">照査項目（活用内容別）</th><th style="text-align:left;">確認内容</th><th style="text-align:left;">照査結果/コメント</th></tr>
+      ${modelRows}
+    </table>
+    <h4>4. 属性情報・成果品の照査</h4>
+    <table class="t chk">
+      <tr><th>確認</th><th style="text-align:left;">照査項目</th><th style="text-align:left;">確認内容</th></tr>
+      <tr><td>☐</td><td>属性情報の付与</td><td>必要な属性が漏れなく付与されているか</td></tr>
+      <tr><td>☐</td><td>数量との整合</td><td>モデル数量と数量計算書が一致するか</td></tr>
+      <tr><td>☐</td><td>ファイル形式</td><td>IFC等の指定形式で出力されているか</td></tr>
+      <tr><td>☐</td><td>フォルダ構成</td><td>電子納品要領に準拠しているか</td></tr>
+      <tr><td>☐</td><td>成果品の網羅性</td><td>成果品（${d.deliverable?d.deliverable:REQ}）が揃っているか</td></tr>
+    </table>
+    <p style="margin-top:16px;">照査技術者：${d.checker?d.checker:'<span class="hl">【要記入：氏名・押印】</span>'}</p>
+    <div class="src-note">フォーマット：自社実務（五名ダム等）＋国交省照査時チェックシート項目に基づく</div>`;
+
+  return {plan,report,check};
+}
+
+/* ============ 不足情報一覧 ============ */
+function renderMissing(){
+  const missing=FIELDS.filter(f=>!(state.data[f.key]&&state.data[f.key].trim()));
+  const found=FIELDS.length-missing.length;
+  const sel=selectedItems();const noItem=!(sel.g.length||sel.s.length);
+  let extra=noItem?`<li><b>BIM/CIM活用項目が未選択</b>（左メニューで義務／推奨項目を選択）</li>`:"";
+  if(missing.length||noItem){
+    document.getElementById("missArea").innerHTML=`
+      <div class="missbox"><h3>⚠ 不足情報：${missing.length+ (noItem?1:0)}件（基本項目 ${found}/${FIELDS.length} を抽出）</h3>
+      <p style="margin:0;font-size:12px;">以下は資料から読み取れなかった項目です。各ドキュメント内の <span class="hl">【要記入】</span> を埋めてください。</p>
+      <ul>${extra}${missing.map(m=>`<li><b>${m.label}</b></li>`).join("")}</ul></div>`;
+  }else{
+    document.getElementById("missArea").innerHTML=
+      `<div class="missbox" style="background:#ecfdf3;border-color:#a7f3d0;"><h3 style="color:var(--ok);">✓ 基本項目をすべて抽出しました（${found}/${FIELDS.length}）</h3>
+      <p style="margin:0;font-size:12px;">本文中の【要記入】（担当者氏名・所属、作成範囲、効果の図表等）をご確認ください。</p></div>`;
+  }
+}
+
+/* ============ 描画・出力 ============ */
+document.querySelectorAll(".tab").forEach(tab=>{
+  tab.addEventListener("click",()=>{
+    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+    tab.classList.add("active");state.current=tab.dataset.doc;if(state.docs)renderDoc();});
+});
+function renderDoc(){
+  const style=document.getElementById("styleSel").value;
+  document.getElementById("output").innerHTML=`<div class="doc style-${style}" id="docBody">${state.docs[state.current]}</div>`;
+}
+function docTitle(){return {plan:"実施計画書",report:"実施報告書",check:"照査チェックシート"}[state.current];}
+function fullHTML(){
+  const css=document.querySelector("style").innerHTML;
+  return `<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>${docTitle()}</title>
+    <style>${css} body{background:#fff;padding:30px;}</style></head><body>${document.getElementById("docBody").outerHTML}</body></html>`;
+}
+function downloadDoc(type){
+  if(!state.docs)return;
+  const name=`${docTitle()}_${(state.data.projectName||"BIMCIM")}`.replace(/[\\\/:*?"<>|【】\s]/g,"").slice(0,40);
+  if(type==="html")dl(fullHTML(),name+".html","text/html");
+  else dl(fullHTML().replace("<html","<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'"),name+".doc","application/msword");
+}
+function dl(content,filename,mime){
+  const blob=new Blob([content],{type:mime+";charset=utf-8"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=filename;a.click();URL.revokeObjectURL(a.href);
+}
+function copyForGDocs(){
+  const html=document.getElementById("docBody").innerHTML;
+  try{const blob=new Blob([html],{type:"text/html"});
+    navigator.clipboard.write([new ClipboardItem({"text/html":blob})]).then(
+      ()=>alert("コピーしました。Googleドキュメントを開いて貼り付け（Ctrl+V）してください。"),()=>fallbackCopy());
+  }catch(e){fallbackCopy();}
+}
+function fallbackCopy(){
+  const r=document.createRange();r.selectNode(document.getElementById("docBody"));
+  window.getSelection().removeAllRanges();window.getSelection().addRange(r);
+  document.execCommand("copy");window.getSelection().removeAllRanges();
+  alert("コピーしました。Googleドキュメントに貼り付けてください。");
+}
+</script>
+</body>
+</html>
