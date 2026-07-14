@@ -128,7 +128,7 @@
       </div>
       <div id="chipSpec"></div>
       <input type="file" id="fileInput" accept=".pdf,.docx" style="display:none;">
-      <button class="btn-mini" id="sampleBtn" style="width:100%;margin-top:8px;">▶ サンプル資料（宇治山田港）で試す</button>
+      <button class="btn-mini" id="sampleBtn" style="width:100%;margin-top:8px;">▶ サンプル資料（記載例）で試す</button>
     </div>
 
     <div class="panel">
@@ -166,8 +166,8 @@
     </div>
 
     <div class="panel">
-      <h2>📚 過年度事例ライブラリ</h2>
-      <div class="note" style="margin:0 0 6px;">Googleドライブ「設計5期/6期」から収集した実成果物。様式・記載例の参照に。</div>
+      <h2>📚 様式・記載例ライブラリ</h2>
+      <div class="note" style="margin:0 0 6px;">国交省記載例と自社標準様式に基づく参照用サンプル（架空・記載例）。</div>
       <div class="lib" id="libList"></div>
     </div>
   </div>
@@ -262,32 +262,31 @@ const KATSUYO = {
   ]
 };
 
-/* ============ 過年度事例ライブラリ（Driveから収集） ============ */
+/* ============ 様式・記載例ライブラリ（架空の参照サンプル。実データ・実リンクは含みません） ============ */
 const LIBRARY = [
-  {n:"BIMCIM実施計画書_令和6年度瑞浪恵那道路恵那地区整備工事", t:"実施計画書", u:"https://drive.google.com/file/d/1LSABbohPCCYSGRHJb-loFATo9YagWmJ6/view"},
-  {n:"BIMCIM実施報告書_令和5～6年度山形南部交通対策設計業務", t:"実施報告書", u:"https://drive.google.com/file/d/1OCQXNdU0gcqxMFN4_HXtNdjJcIuALa1p/view"},
-  {n:"BIMCIMモデル照査時チェックシート_山形南部交通対策設計業務", t:"照査CS", u:"https://drive.google.com/file/d/1h03uLA3zjZ5llKW5OT7mlhCJ73AQAyyW/view"},
-  {n:"250502 BIM/CIM実施計画書（西舞鶴道路）", t:"実施計画書", u:"https://drive.google.com/file/d/1_L-cZ9myGVY4VIHtImT7wWUna477VRcG/view"},
-  {n:"01-1 業務計画書 第2回変更（西舞鶴道路他）", t:"業務計画書", u:"https://drive.google.com/file/d/1_Kt5_op4hplR1VRq8MCQMzFDL96XHSys/view"},
-  {n:"【宇治山田】業務計画書", t:"業務計画書", u:"https://docs.google.com/document/d/1g-o6UC7blMkSoiIAsEaFsFk7g3qTg1wpC7SoK_q9dTE/edit"},
-  {n:"BIM/CIM成果品 照査チェックシート（五名ダム）", t:"照査CS", u:"https://docs.google.com/document/d/1YmA2aTyO3WJKPXLCyIQFpWynlfIzki-QZFy8gmzPxe0/edit"},
-  {n:"BIM・CIM実施計画書 / 実施報告書（雛形）", t:"実施計画書", u:"https://drive.google.com/file/d/1E87UeT0Gd57YiH9cD_yxzEgrVK4IDrbp/view"},
-  {n:"特記仕様書（R6岡山倉敷立体構造物予備設計）", t:"特記仕様書", u:"https://drive.google.com/file/d/1af6_rzS5-VROYM8mn71wd_NNGKD6XqBC/view"}
+  {n:"BIM/CIM実施計画書（記載例）△△川河川改修詳細設計", t:"実施計画書"},
+  {n:"BIM/CIM実施報告書（記載例）△△地区交通対策設計", t:"実施報告書"},
+  {n:"BIM/CIMモデル照査時チェックシート（記載例）", t:"照査CS"},
+  {n:"BIM/CIM実施計画書（記載例）○○道路詳細設計", t:"実施計画書"},
+  {n:"業務計画書（記載例／様式第5号）", t:"業務計画書"},
+  {n:"特記仕様書（記載例）○○構造物予備設計", t:"特記仕様書"},
+  {n:"BIM/CIM成果品 照査チェックシート（記載例）", t:"照査CS"},
+  {n:"BIM/CIM実施計画書・実施報告書（国交省 記載例R6 雛形）", t:"様式雛形"}
 ];
 
-/* ============ サンプル（宇治山田港 業務計画書の実データ） ============ */
-const SAMPLE = `業務計画書
-業務名： 令和7年度県単海岸局部改良 第31-1分2003号 宇治山田港(海岸)(西・荘工区)海岸侵食対策(堤防設計)業務委託
-発注者： 三重県伊勢建設事務所 事業推進室 流域一課
-受注者： 三井共同建設コンサルタント株式会社 三重営業所
-履行場所： 伊勢市二見町西～伊勢市二見町荘地内
-履行期間： 令和7年8月18日～令和8年5月29日
-管理技術者： 近森 裕之
-照査技術者： 瀧澤 竜一
-業務の目的： 既往設計成果等を踏まえ工事の実施に必要な図面・数量作成を行う詳細設計を目的とする
+/* ============ サンプル（架空の記載例。実データは含みません） ============ */
+const SAMPLE = `業務計画書（記載例）
+業務名： 令和○年度 △△川河川改修詳細設計業務（BIM/CIM活用）
+発注者： ○○地方整備局 △△河川国道事務所
+受注者： 株式会社○○建設コンサルタント
+履行場所： ○○県△△市地内
+履行期間： 令和○年○月○日～令和○年○月○日
+管理技術者： （例）技術 太郎
+照査技術者： （例）照査 花子
+業務の目的： 既往設計成果等を踏まえ、工事の実施に必要な図面・数量作成を行う詳細設計を目的とする
 詳細度： 200～300
 使用ソフトウェア： Civil3D, Revit
-成果品： 業務報告書及び概要版(A4版)、電子記憶媒体(DVD-R)3部、紙ベース1部`;
+成果品： 報告書一式、電子成果品、3次元モデル（IFC／オリジナル形式）`;
 
 /* ============ ファイルアップロード ============ */
 let activeTarget=null;
@@ -335,7 +334,7 @@ document.getElementById("orderType").addEventListener("change",()=>{if(state.doc
 document.getElementById("sampleBtn").addEventListener("click",()=>{
   state.planText=SAMPLE;state.specText="";
   document.getElementById("chipPlan").innerHTML=
-    `<div class="filechip">📎 <span>宇治山田港_業務計画書.pdf</span><span class="x" onclick="clearFile('Plan')">×</span></div>`;
+    `<div class="filechip">📎 <span>サンプル業務計画書_記載例.pdf</span><span class="x" onclick="clearFile('Plan')">×</span></div>`;
   // サンプルは標準的な義務3項目＋推奨2項目を自動選択
   ["g_zentai","g_tokutei","g_2jigen"].forEach(id=>{const e=document.getElementById("cb_"+id);if(e)e.checked=true;});
   ["s_kasane","s_jigyo"].forEach(id=>{const e=document.getElementById("cb_"+id);if(e)e.checked=true;});
@@ -357,7 +356,7 @@ function selectedItems(){
 }
 function renderLibrary(){
   document.getElementById("libList").innerHTML = LIBRARY.map(l=>
-    `<a href="${l.u}" target="_blank">${l.n}<span class="meta"> — ${l.t}</span></a>`).join("");
+    `<a>${l.n}<span class="meta"> — ${l.t}</span></a>`).join("");
 }
 renderKatsuyo();renderLibrary();
 
@@ -575,7 +574,7 @@ function buildDocs(d,sel){
       <tr><td>☐</td><td>成果品の網羅性</td><td>成果品（${d.deliverable?d.deliverable:REQ}）が揃っているか</td></tr>
     </table>
     <p style="margin-top:16px;">照査技術者：${d.checker?d.checker:'<span class="hl">【要記入：氏名・押印】</span>'}</p>
-    <div class="src-note">フォーマット：自社実務（五名ダム等）＋国交省照査時チェックシート項目に基づく</div>`;
+    <div class="src-note">フォーマット：自社標準様式＋国交省照査時チェックシート項目に基づく（記載例）</div>`;
 
   return {plan,report,check};
 }
